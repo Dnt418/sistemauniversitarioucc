@@ -21,7 +21,7 @@ services:
       - siga-network
 
   pgbouncer:
-    image: edoburu/pgbouncer:v1.22.1
+    image: edoburu/pgbouncer:latest
     container_name: siga-pgbouncer
     restart: unless-stopped
     depends_on:
@@ -39,7 +39,7 @@ services:
       ADMIN_USERS: ${POSTGRES_USER:-siga_admin}
       AUTH_TYPE: plain
     ports:
-      - "${PGBOUNCER_PORT:-6432}:6432"
+      - "${PGBOUNCER_PORT:-6432}:5432"
     networks:
       - siga-network
 
@@ -49,7 +49,7 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-siga_redis_secret_2026}"]
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-6380}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -61,7 +61,7 @@ services:
       - siga-network
 
   minio:
-    image: minio/minio:latest
+    image: pgsty/silo:latest
     container_name: siga-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -73,24 +73,19 @@ services:
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio_data:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
     networks:
       - siga-network
 
   # Provisionamento automático de Buckets iniciais no MinIO
   minio-init-buckets:
-    image: minio/mc:latest
+    image: pgsty/silo:latest
     container_name: siga-minio-init
     depends_on:
-      minio:
-        condition: service_healthy
+      - minio
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin_secret_2026};
+      sleep 2;
+      /usr/bin/mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-minioadmin} $${MINIO_ROOT_PASSWORD:-minioadmin_secret_2026};
       /usr/bin/mc mb --ignore-existing local/siga-documents;
       /usr/bin/mc mb --ignore-existing local/siga-proofs;
       /usr/bin/mc mb --ignore-existing local/siga-pautas;

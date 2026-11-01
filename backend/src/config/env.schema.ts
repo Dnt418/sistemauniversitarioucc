@@ -12,7 +12,7 @@ export const envSchema = z.object({
   DIRECT_URL: z.string().url().describe('URL direta do PostgreSQL para migrações do Prisma'),
 
   // Redis (BullMQ, locks atômicos e cache)
-  REDIS_URL: z.string().url().default('redis://:siga_redis_secret_2026@localhost:6379'),
+  REDIS_URL: z.string().url().default('redis://:siga_redis_secret_2026@localhost:6380'),
 
   // Autenticação & JWT
   JWT_SECRET: z
