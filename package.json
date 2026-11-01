@@ -1,0 +1,32 @@
+{
+  "name": "siga-universitario",
+  "version": "1.0.0",
+  "description": "Sistema Integrado de Gestao Academica (SIGA Universitario - Angola)",
+  "private": true,
+  "scripts": {
+    "dev": "npm run --prefix backend dev",
+    "dev:backend": "npm run --prefix backend dev",
+    "dev:infra": "docker compose -f infra/docker-compose.yml up -d",
+    "dev:infra:down": "docker compose -f infra/docker-compose.yml down",
+    "dev:infra:logs": "docker compose -f infra/docker-compose.yml logs -f",
+    "dev:db:deploy": "npm run --prefix backend prisma:deploy",
+    "dev:db:seed": "npm run --prefix backend seed",
+    "dev:db:setup": "npm run --prefix backend prisma:deploy && npm run --prefix backend seed",
+    "build": "npm run --prefix backend build",
+    "test": "npm test --prefix backend",
+    "lint": "npm run --prefix backend lint",
+    "format": "npm run --prefix backend format"
+  },
+  "keywords": [
+    "siga",
+    "gestao-academica",
+    "angola",
+    "universidade",
+    "nestjs",
+    "postgresql",
+    "redis"
+  ],
+  "author": "Equipe SIGA Universitario",
+  "license": "UNLICENSED"
+}
+
