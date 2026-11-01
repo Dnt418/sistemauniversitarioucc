@@ -58,7 +58,7 @@ export function validateEnv(config: Record<string, unknown>): EnvConfig {
       .join('\n');
 
     throw new Error(
-      `\n❌ ERRO FATAL DE CONFIGURAÇÃO: As variáveis de ambiente são inválidas ou estão ausentes:\n${formattedErrors}\n`,
+      `\n[ERRO DE CONFIGURACAO] As variaveis de ambiente sao invalidas ou estao ausentes:\n${formattedErrors}\n`,
     );
   }
 

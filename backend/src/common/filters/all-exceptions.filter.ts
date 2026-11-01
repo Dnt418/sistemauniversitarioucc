@@ -5,10 +5,10 @@ import {
   HttpException,
   HttpStatus,
   Logger,
-} from '@nestjs/common';
-import { Request, Response } from 'express';
-import { ZodValidationException } from 'nestjs-zod';
-import { ZodError } from 'zod';
+} from "@nestjs/common";
+import { ZodError } from "zod";
+import { Request, Response } from "express";
+import { ZodValidationException } from "nestjs-zod";
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -20,27 +20,27 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message: string | object = 'Erro interno do servidor';
-    let error = 'Internal Server Error';
+    let message: string | object = "Erro interno do servidor";
+    let error = "Erro Interno do Servidor";
     let details: unknown = null;
 
     // 1. Tratamento de exceções Zod (validação de schemas e contratos)
     if (exception instanceof ZodValidationException) {
       status = HttpStatus.BAD_REQUEST;
-      error = 'Bad Request';
+      error = "Requisicao Invalida";
       const zodError = exception.getZodError();
-      message = 'Falha na validação dos dados de entrada';
+      message = "Falha na validacao dos dados de entrada";
       details = (zodError as ZodError).errors.map((err) => ({
-        field: err.path.join('.'),
+        field: err.path.join("."),
         message: err.message,
         code: err.code,
       }));
     } else if (exception instanceof ZodError) {
       status = HttpStatus.BAD_REQUEST;
-      error = 'Bad Request';
-      message = 'Falha na validação dos dados de entrada';
+      error = "Requisicao Invalida";
+      message = "Falha na validacao dos dados de entrada";
       details = exception.errors.map((err) => ({
-        field: err.path.join('.'),
+        field: err.path.join("."),
         message: err.message,
         code: err.code,
       }));
@@ -50,9 +50,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
 
-      if (typeof exceptionResponse === 'string') {
+      if (typeof exceptionResponse === "string") {
         message = exceptionResponse;
-      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+      } else if (
+        typeof exceptionResponse === "object" &&
+        exceptionResponse !== null
+      ) {
         const resObj = exceptionResponse as Record<string, unknown>;
         message = (resObj.message as string) || exception.message;
         error = (resObj.error as string) || error;
@@ -81,4 +84,3 @@ export class AllExceptionsFilter implements ExceptionFilter {
     response.status(status).json(errorPayload);
   }
 }
-

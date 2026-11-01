@@ -8,7 +8,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// ==============================================================================
 // ENUMS DO DOMÍNIO DE IDENTIDADE E CONTROLE DE ACESSO
+// ==============================================================================
 
 enum AccountStatus {
   ACTIVE
@@ -55,6 +57,24 @@ enum DocenteRegime {
   COLABORADOR
 }
 
+enum DegreeLevel {
+  LICENCIATURA
+  MESTRADO
+  DOUTORAMENTO
+  POS_GRADUACAO
+}
+
+enum RegimeAcademico {
+  SEMESTRAL
+  ANUAL
+}
+
+enum TurmaTurno {
+  MANHA
+  TARDE
+  POS_LABORAL
+}
+
 enum AuditAction {
   CREATE
   UPDATE
@@ -65,7 +85,9 @@ enum AuditAction {
   PROFILE_SWITCH
 }
 
-// IDENTIDADE CENTRAL (CONTA DE ACESSO DESACOPLADA)
+// ==============================================================================
+// 1. IDENTIDADE CENTRAL (CONTA DE ACESSO DESACOPLADA)
+// ==============================================================================
 
 model Account {
   id           String        @id @default(uuid()) @db.Uuid
@@ -92,7 +114,9 @@ model Account {
   @@map("accounts")
 }
 
-// PERFIS ESPECIALIZADOS E ISOLADOS
+// ==============================================================================
+// 2. PERFIS ESPECIALIZADOS E ISOLADOS
+// ==============================================================================
 
 model StudentProfile {
   id                 String         @id @default(uuid()) @db.Uuid
@@ -107,13 +131,16 @@ model StudentProfile {
   academicStatus     AcademicStatus @default(REGULAR) @map("academic_status")
   currentYear        Int            @default(1) @map("current_year")
   admissionDate      DateTime       @default(now()) @map("admission_date")
+  courseId           String?        @map("course_id") @db.Uuid
   createdAt          DateTime       @default(now()) @map("created_at")
   updatedAt          DateTime       @updatedAt @map("updated_at")
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  course  Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
 
   @@index([studentNumber])
   @@index([identityCardNumber])
+  @@index([courseId])
   @@map("student_profiles")
 }
 
@@ -129,14 +156,18 @@ model DocenteProfile {
   specialization       String?
   phoneNumber          String?         @map("phone_number")
   photoUrl             String?         @map("photo_url")
+  departmentId         String?         @map("department_id") @db.Uuid
   isActive             Boolean         @default(true) @map("is_active")
   createdAt            DateTime        @default(now()) @map("created_at")
   updatedAt            DateTime        @updatedAt @map("updated_at")
 
-  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account        Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  department     Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  turmasRegidas  Turma[]
 
   @@index([mechanographicNumber])
   @@index([identityCardNumber])
+  @@index([departmentId])
   @@map("docente_profiles")
 }
 
@@ -162,17 +193,201 @@ model StaffProfile {
 model CoordinatorProfile {
   id              String   @id @default(uuid()) @db.Uuid
   accountId       String   @unique @map("account_id") @db.Uuid
+  courseId        String?  @map("course_id") @db.Uuid
   appointmentDate DateTime @default(now()) @map("appointment_date")
   isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  course  Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
 
+  @@index([courseId])
   @@map("coordinator_profiles")
 }
 
-// SEGURANÇA, RECOVERY E SESSÕES
+// ==============================================================================
+// 3. ESTRUTURA ORGANIZACIONAL & CURRICULAR (RF-05, RF-06)
+// ==============================================================================
+
+model Faculty {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique // ex.: "FE", "FCS"
+  name        String   // ex.: "Faculdade de Engenharia"
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  departments Department[]
+
+  @@map("faculties")
+}
+
+model Department {
+  id        String   @id @default(uuid()) @db.Uuid
+  facultyId String   @map("faculty_id") @db.Uuid
+  code      String   @unique // ex.: "DETI"
+  name      String   // ex.: "Departamento de Engenharia e Tecnologias de Informação"
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  faculty  Faculty          @relation(fields: [facultyId], references: [id], onDelete: Restrict)
+  courses  Course[]
+  docentes DocenteProfile[]
+
+  @@index([facultyId])
+  @@map("departments")
+}
+
+model Course {
+  id            String          @id @default(uuid()) @db.Uuid
+  departmentId  String          @map("department_id") @db.Uuid
+  code          String          @unique // ex.: "LEI"
+  name          String          // ex.: "Engenharia Informática"
+  degreeLevel   DegreeLevel     @default(LICENCIATURA) @map("degree_level")
+  regime        RegimeAcademico @default(SEMESTRAL)
+  durationYears Int             @default(5) @map("duration_years")
+  totalCredits  Int             @default(300) @map("total_credits") // ECTS
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  department   Department           @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  curriculums  Curriculum[]
+  students     StudentProfile[]
+  coordinators CoordinatorProfile[]
+
+  @@index([departmentId])
+  @@map("courses")
+}
+
+model Curriculum {
+  id        String   @id @default(uuid()) @db.Uuid
+  courseId  String   @map("course_id") @db.Uuid
+  version   String   // ex.: "2024.1", "2026.1"
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  disciplines Discipline[]
+
+  @@unique([courseId, version])
+  @@index([courseId])
+  @@map("curriculums")
+}
+
+model Discipline {
+  id               String   @id @default(uuid()) @db.Uuid
+  curriculumId     String   @map("curriculum_id") @db.Uuid
+  code             String   // ex.: "EDA1", "BD2"
+  name             String   // ex.: "Estrutura de Dados e Algoritmos I"
+  curricularYear   Int      @map("curricular_year") // 1º ao 5º ano
+  semester         Int      // 1 ou 2
+  credits          Int      // Total de Créditos ECTS
+  theoreticalHours Int      @default(30) @map("theoretical_hours")
+  practicalHours   Int      @default(30) @map("practical_hours")
+  labHours         Int      @default(0) @map("lab_hours")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  curriculum     Curriculum     @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  prerequisites  Prerequisite[] @relation("DisciplinePrerequisites")
+  isRequirementOf Prerequisite[] @relation("PrerequisiteTarget")
+  turmas         Turma[]
+
+  @@unique([curriculumId, code])
+  @@index([curriculumId])
+  @@map("disciplines")
+}
+
+model Prerequisite {
+  id                     String   @id @default(uuid()) @db.Uuid
+  disciplineId           String   @map("discipline_id") @db.Uuid
+  prerequisiteDisciplineId String @map("prerequisite_discipline_id") @db.Uuid
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  discipline             Discipline @relation("DisciplinePrerequisites", fields: [disciplineId], references: [id], onDelete: Cascade)
+  prerequisiteDiscipline Discipline @relation("PrerequisiteTarget", fields: [prerequisiteDisciplineId], references: [id], onDelete: Cascade)
+
+  @@unique([disciplineId, prerequisiteDisciplineId])
+  @@index([disciplineId])
+  @@index([prerequisiteDisciplineId])
+  @@map("prerequisites")
+}
+
+// ==============================================================================
+// 4. PERÍODOS LETIVOS, CALENDÁRIO & TURMAS (RF-07, RF-08)
+// ==============================================================================
+
+model AcademicYear {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique // ex.: "2025/2026", "2026/2027"
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  isActive  Boolean  @default(false) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  semesters AcademicSemester[]
+
+  @@map("academic_years")
+}
+
+model AcademicSemester {
+  id              String   @id @default(uuid()) @db.Uuid
+  academicYearId  String   @map("academic_year_id") @db.Uuid
+  semesterNumber  Int      @map("semester_number") // 1 ou 2
+  startDate       DateTime @map("start_date")
+  endDate         DateTime @map("end_date")
+  isCurrent       Boolean  @default(false) @map("is_current")
+
+  // Travas temporais automáticas do sistema (RF-07)
+  enrollmentStartDate    DateTime @map("enrollment_start_date")
+  enrollmentEndDate      DateTime @map("enrollment_end_date")
+  classesStartDate       DateTime @map("classes_start_date")
+  classesEndDate         DateTime @map("classes_end_date")
+  gradeSubmissionDeadline DateTime @map("grade_submission_deadline")
+  examRecursoDeadline    DateTime @map("exam_recurso_deadline")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  turmas       Turma[]
+
+  @@unique([academicYearId, semesterNumber])
+  @@index([academicYearId])
+  @@map("academic_semesters")
+}
+
+model Turma {
+  id                 String     @id @default(uuid()) @db.Uuid
+  code               String     // ex.: "LEI-T1", "EDA-PL2"
+  disciplineId       String     @map("discipline_id") @db.Uuid
+  academicSemesterId String     @map("academic_semester_id") @db.Uuid
+  regenteDocenteId   String?    @map("regente_docente_id") @db.Uuid
+  turno              TurmaTurno @default(MANHA)
+  maxCapacity        Int        @default(45) @map("max_capacity") // Limite máximo de vagas (RF-08)
+  occupiedCapacity   Int        @default(0) @map("occupied_capacity")
+  schedule           Json?      // Cronograma semanal: [{ dia: "SEGUNDA", inicio: "08:00", fim: "10:00", sala: "Sala 12" }]
+  isActive           Boolean    @default(true) @map("is_active")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+
+  discipline       Discipline       @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
+  academicSemester AcademicSemester @relation(fields: [academicSemesterId], references: [id], onDelete: Cascade)
+  regenteDocente   DocenteProfile?  @relation(fields: [regenteDocenteId], references: [id], onDelete: SetNull)
+
+  @@unique([disciplineId, academicSemesterId, code])
+  @@index([disciplineId])
+  @@index([academicSemesterId])
+  @@index([regenteDocenteId])
+  @@map("turmas")
+}
+
+// ==============================================================================
+// 5. SEGURANÇA, RECOVERY E SESSÕES
+// ==============================================================================
 
 model RefreshToken {
   id        String   @id @default(uuid()) @db.Uuid
@@ -204,7 +419,9 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
-// TRILHA DE AUDITORIA TRANSACIONAL IMUTÁVEL (RF-04)
+// ==============================================================================
+// 6. TRILHA DE AUDITORIA TRANSACIONAL IMUTÁVEL (RF-04)
+// ==============================================================================
 
 model AuditLog {
   id            String      @id @default(uuid()) @db.Uuid

@@ -1,17 +1,17 @@
-import { NestFactory } from '@nestjs/core';
-import { Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { patchNestJsSwagger, ZodValidationPipe } from 'nestjs-zod';
-import cookieParser from 'cookie-parser';
+import { NestFactory } from "@nestjs/core";
+import { Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import { patchNestJsSwagger, ZodValidationPipe } from "nestjs-zod";
+import cookieParser from "cookie-parser";
 
-import { AppModule } from './app.module';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import { ResponseTransformInterceptor } from './common/interceptors/response-transform.interceptor';
-import { EnvConfig } from './config/env.schema';
+import { AppModule } from "./app.module";
+import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
+import { ResponseTransformInterceptor } from "./common/interceptors/response-transform.interceptor";
+import { EnvConfig } from "./config/env.schema";
 
 async function bootstrap() {
-  const logger = new Logger('SIGA-Bootstrap');
+  const logger = new Logger("SIGA-Bootstrap");
 
   // Habilita integração profunda do Zod com OpenAPI/Swagger
   patchNestJsSwagger();
@@ -19,20 +19,20 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get<ConfigService<EnvConfig, true>>(ConfigService);
 
-  const port = configService.get('PORT', { infer: true });
-  const apiPrefix = configService.get('API_PREFIX', { infer: true });
-  const corsOrigin = configService.get('CORS_ORIGIN', { infer: true });
+  const port = configService.get("PORT", { infer: true });
+  const apiPrefix = configService.get("API_PREFIX", { infer: true });
+  const corsOrigin = configService.get("CORS_ORIGIN", { infer: true });
 
   // Cookies seguros (obrigatório para Refresh Tokens e sessão)
   app.use(cookieParser());
 
   // Habilitar CORS para os portais frontend (Admin, Docente, Estudante)
-  const allowedOrigins = corsOrigin.split(',').map((o) => o.trim());
+  const allowedOrigins = corsOrigin.split(",").map((o) => o.trim());
   app.enableCors({
     origin: allowedOrigins,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Active-Profile'],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Active-Profile"],
   });
 
   // Prefixo Global da API (ex.: /api/v1)
@@ -49,46 +49,50 @@ async function bootstrap() {
 
   // Configuração da Documentação Interativa OpenAPI / Swagger
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('SIGA Universitário - API Gateway')
+    .setTitle("SIGA Universitário - API Gateway")
     .setDescription(
-      'Documentação oficial da API do Sistema Integrado de Gestão Acadêmica (SIGA). ' +
-        'Arquitetura baseada em monólito modular, Zod Pipes e isolamento estrito de perfis.',
+      "Documentação oficial da API do Sistema Integrado de Gestão Acadêmica (SIGA). " +
+        "Arquitetura baseada em monólito modular, Zod Pipes e isolamento estrito de perfis.",
     )
-    .setVersion('0.1.0')
+    .setVersion("0.1.0")
     .addBearerAuth(
       {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'Authorization',
-        description: 'Insira o Access Token JWT (validade de 15 minutos)',
-        in: 'header',
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+        name: "Authorization",
+        description: "Insira o Access Token JWT (validade de 15 minutos)",
+        in: "header",
       },
-      'JWT-Auth',
+      "JWT-Auth",
     )
     .addApiKey(
       {
-        type: 'apiKey',
-        name: 'X-Active-Profile',
-        in: 'header',
-        description: 'Papel ativo selecionado (ex: DOCENTE, ESTUDANTE, SECRETARIA)',
+        type: "apiKey",
+        name: "X-Active-Profile",
+        in: "header",
+        description:
+          "Papel ativo selecionado (ex: DOCENTE, ESTUDANTE, SECRETARIA)",
       },
-      'Active-Profile',
+      "Active-Profile",
     )
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
-    customSiteTitle: 'SIGA Universitário - Swagger Docs',
+    customSiteTitle: "SIGA Universitário - Swagger Docs",
     swaggerOptions: {
       persistAuthorization: true,
     },
   });
 
   await app.listen(port);
-  logger.log(`🚀 SIGA Backend em execução em: http://localhost:${port}/${apiPrefix}`);
-  logger.log(`📚 Documentação Swagger disponível em: http://localhost:${port}/${apiPrefix}/docs`);
+  logger.log(
+    `SIGA Backend em execucao em: http://localhost:${port}/${apiPrefix}`,
+  );
+  logger.log(
+    `Documentacao Swagger disponivel em: http://localhost:${port}/${apiPrefix}/docs`,
+  );
 }
 
 bootstrap();
-

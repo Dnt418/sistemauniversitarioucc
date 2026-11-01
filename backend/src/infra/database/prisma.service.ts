@@ -27,10 +27,10 @@ export class PrismaService
   async onModuleInit() {
     try {
       await this.$connect();
-      this.logger.log(' Conectado com sucesso ao PostgreSQL via Prisma ORM');
+      this.logger.log('Conectado com sucesso ao PostgreSQL via Prisma ORM');
     } catch (error) {
       this.logger.error(
-        ' Falha ao conectar ao banco de dados no boot da aplicação',
+        'Falha ao conectar ao banco de dados na inicializacao da aplicacao',
         error,
       );
     }
@@ -38,7 +38,7 @@ export class PrismaService
 
   async onModuleDestroy() {
     await this.$disconnect();
-    this.logger.log(' Conexão com PostgreSQL encerrada com sucesso');
+    this.logger.log('Conexao com PostgreSQL encerrada com sucesso');
   }
 }
 
