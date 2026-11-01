@@ -75,6 +75,13 @@ enum TurmaTurno {
   POS_LABORAL
 }
 
+enum EnrollmentStatus {
+  CONFIRMADA
+  PENDENTE
+  CANCELADA
+  ANULADA
+}
+
 enum AuditAction {
   CREATE
   UPDATE
@@ -135,8 +142,9 @@ model StudentProfile {
   createdAt          DateTime       @default(now()) @map("created_at")
   updatedAt          DateTime       @updatedAt @map("updated_at")
 
-  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  course  Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  account     Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  course      Course?      @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  enrollments Enrollment[]
 
   @@index([studentNumber])
   @@index([identityCardNumber])
@@ -354,6 +362,7 @@ model AcademicSemester {
 
   academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
   turmas       Turma[]
+  enrollments  Enrollment[]
 
   @@unique([academicYearId, semesterNumber])
   @@index([academicYearId])
@@ -377,6 +386,7 @@ model Turma {
   discipline       Discipline       @relation(fields: [disciplineId], references: [id], onDelete: Cascade)
   academicSemester AcademicSemester @relation(fields: [academicSemesterId], references: [id], onDelete: Cascade)
   regenteDocente   DocenteProfile?  @relation(fields: [regenteDocenteId], references: [id], onDelete: SetNull)
+  enrollments      Enrollment[]
 
   @@unique([disciplineId, academicSemesterId, code])
   @@index([disciplineId])
@@ -386,7 +396,35 @@ model Turma {
 }
 
 // ==============================================================================
-// 5. SEGURANÇA, RECOVERY E SESSÕES
+// 5. MATRICULAS E INSCRICOES EM TURMAS (RF-09, RF-10, RF-11)
+// ==============================================================================
+
+model Enrollment {
+  id                 String           @id @default(uuid()) @db.Uuid
+  studentProfileId   String           @map("student_profile_id") @db.Uuid
+  turmaId            String           @map("turma_id") @db.Uuid
+  academicSemesterId String           @map("academic_semester_id") @db.Uuid
+  status             EnrollmentStatus @default(CONFIRMADA)
+  verificationHash   String           @unique @map("verification_hash") // Hash SHA-256 para validacao publica de autenticidade (RF-11)
+  enrolledAt         DateTime         @default(now()) @map("enrolled_at")
+  canceledAt         DateTime?        @map("canceled_at")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+
+  student          StudentProfile   @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  turma            Turma            @relation(fields: [turmaId], references: [id], onDelete: Restrict)
+  academicSemester AcademicSemester @relation(fields: [academicSemesterId], references: [id], onDelete: Restrict)
+
+  @@unique([studentProfileId, turmaId, academicSemesterId])
+  @@index([studentProfileId])
+  @@index([turmaId])
+  @@index([academicSemesterId])
+  @@index([verificationHash])
+  @@map("enrollments")
+}
+
+// ==============================================================================
+// 6. SEGURANÇA, RECOVERY E SESSÕES
 // ==============================================================================
 
 model RefreshToken {

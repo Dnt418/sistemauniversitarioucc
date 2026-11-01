@@ -9,6 +9,7 @@ import { QueueModule } from './infra/queue/queue.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AcademicModule } from './modules/academic/academic.module';
+import { EnrollmentModule } from './modules/enrollment/enrollment.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { ActiveProfileGuard } from './common/guards/active-profile.guard';
@@ -25,6 +26,7 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     HealthModule,
     AuthModule,
     AcademicModule,
+    EnrollmentModule,
   ],
   providers: [
     {
