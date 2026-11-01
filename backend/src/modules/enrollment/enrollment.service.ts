@@ -192,6 +192,25 @@ export class EnrollmentService {
       );
     }
 
+    // Trava Financeira Academica (RF-23): Bloqueio compulsório se houver propinas vencidas
+    const overdueInvoices = await this.prisma.invoice.findMany({
+      where: {
+        studentProfileId: student.id,
+        dueDate: { lt: new Date() },
+        status: { in: ['PENDENTE', 'VENCIDO'] },
+      },
+    });
+
+    if (overdueInvoices.length > 0) {
+      const totalDebt = overdueInvoices.reduce(
+        (sum, inv) => sum + (Number(inv.totalAmount) - Number(inv.paidAmount)),
+        0,
+      );
+      throw new ForbiddenException(
+        `Matricula bloqueada por trava financeira regulamentar (RF-23): o estudante possui ${overdueInvoices.length} fatura(s) em atraso perfazendo o montante pendente de ${totalDebt.toFixed(2)} AOA. Regularize a situacao na Tesouraria antes de prosseguir com a inscricao.`,
+      );
+    }
+
     // 1. Valida janela de matriculas (RF-07)
     const semester = await this.prisma.academicSemester.findUnique({
       where: { id: input.academicSemesterId },

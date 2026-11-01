@@ -10,6 +10,10 @@ import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AcademicModule } from './modules/academic/academic.module';
 import { EnrollmentModule } from './modules/enrollment/enrollment.module';
+import { GradingModule } from './modules/grading/grading.module';
+import { StudentModule } from './modules/student/student.module';
+import { FinancialModule } from './modules/financial/financial.module';
+import { RegistryModule } from './modules/registry/registry.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { ActiveProfileGuard } from './common/guards/active-profile.guard';
@@ -27,6 +31,10 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     AuthModule,
     AcademicModule,
     EnrollmentModule,
+    GradingModule,
+    StudentModule,
+    FinancialModule,
+    RegistryModule,
   ],
   providers: [
     {
