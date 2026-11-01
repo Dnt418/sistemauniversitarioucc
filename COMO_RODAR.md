@@ -88,7 +88,7 @@ Execute a instalação das dependências do monólito:
 # A partir da raiz:
 npm install --prefix backend
 
-# Ou navegando diretamente até a pasta backend:
+# Ou navegando directamente até a pasta backend:
 cd backend
 npm install
 cd ..
