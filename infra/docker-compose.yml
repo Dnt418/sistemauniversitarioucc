@@ -1,0 +1,124 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: siga-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-siga_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-siga_secret_password_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-siga_universitario}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-siga_admin} -d ${POSTGRES_DB:-siga_universitario}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - siga-network
+
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.22.1
+    container_name: siga-pgbouncer
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_USER: ${POSTGRES_USER:-siga_admin}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-siga_secret_password_2026}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-siga_universitario}
+      POOL_MODE: ${PGBOUNCER_POOL_MODE:-transaction}
+      MAX_CLIENT_CONN: ${PGBOUNCER_MAX_CLIENT_CONN:-1000}
+      DEFAULT_POOL_SIZE: ${PGBOUNCER_DEFAULT_POOL_SIZE:-50}
+      ADMIN_USERS: ${POSTGRES_USER:-siga_admin}
+      AUTH_TYPE: plain
+    ports:
+      - "${PGBOUNCER_PORT:-6432}:6432"
+    networks:
+      - siga-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: siga-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-siga_redis_secret_2026}"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-siga_redis_secret_2026}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - siga-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: siga-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin_secret_2026}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - siga-network
+
+  # Provisionamento automático de Buckets iniciais no MinIO
+  minio-init-buckets:
+    image: minio/mc:latest
+    container_name: siga-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin_secret_2026};
+      /usr/bin/mc mb --ignore-existing local/siga-documents;
+      /usr/bin/mc mb --ignore-existing local/siga-proofs;
+      /usr/bin/mc mb --ignore-existing local/siga-pautas;
+      echo 'Buckets MinIO criados com sucesso!';
+      exit 0;
+      "
+    networks:
+      - siga-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: siga-mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    networks:
+      - siga-network
+
+networks:
+  siga-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: siga_postgres_data
+  redis_data:
+    name: siga_redis_data
+  minio_data:
+    name: siga_minio_data
+

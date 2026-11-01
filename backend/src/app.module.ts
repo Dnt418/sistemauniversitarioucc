@@ -1,0 +1,10 @@
+import { Module } from '@nestjs/common';
+import { AppConfigModule } from './config/app-config.module';
+import { DatabaseModule } from './infra/database/database.module';
+import { HealthModule } from './modules/health/health.module';
+
+@Module({
+  imports: [AppConfigModule, DatabaseModule, HealthModule],
+})
+export class AppModule {}
+
