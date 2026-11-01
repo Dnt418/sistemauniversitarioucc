@@ -41,6 +41,10 @@ export const envSchema = z.object({
     .enum(['true', 'false'])
     .transform((val) => val === 'true')
     .default('false'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('SIGA Universitário <nao-responder@siga.ao>'),
+  PORTAL_URL: z.string().default('http://localhost:3000'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

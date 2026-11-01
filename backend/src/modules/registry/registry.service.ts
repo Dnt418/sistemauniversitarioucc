@@ -19,6 +19,7 @@ import {
 import { PrismaService } from '@infra/database/prisma.service';
 import { StorageService } from '@infra/storage/storage.service';
 import { QueueService } from '@infra/queue/queue.service';
+import { EventsGateway } from '@infra/websocket/events.gateway';
 import {
   UploadPersonalDocumentDto,
   ValidatePersonalDocumentDto,
@@ -34,6 +35,7 @@ export class RegistryService {
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
     private readonly queueService: QueueService,
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
   /**
@@ -222,6 +224,17 @@ export class RegistryService {
       `Documento ${documentId} validado: Status '${newStatus}' pelo funcionario ${staffProfile.fullName}.`,
     );
 
+    this.eventsGateway.notifyAccount(doc.student.accountId, 'documento_pessoal:validado', {
+      documentId,
+      documentType: doc.documentType,
+      status: updatedDoc.status,
+      decision: dto.status,
+      rejectionReason: dto.rejectionReason ?? null,
+      message: isApproval
+        ? `O documento [${doc.documentType}] foi aprovado pela Secretaria Geral.`
+        : `O documento [${doc.documentType}] foi rejeitado pela Secretaria: ${dto.rejectionReason}.`,
+    });
+
     return {
       message: `Documento ${isApproval ? 'validado' : 'rejeitado'} com sucesso.`,
       documentId: updatedDoc.id,
@@ -327,6 +340,15 @@ export class RegistryService {
     this.logger.log(
       `Evento de carreira registrado: Aluno ${studentProfile.studentNumber}, Evento: ${dto.eventType}, Despacho: ${dto.despachoNumber}`,
     );
+
+    this.eventsGateway.notifyAccount(studentProfile.accountId, 'carreira:evento_registrado', {
+      eventId: result.id,
+      eventType: dto.eventType,
+      despachoNumber: dto.despachoNumber,
+      previousStatus,
+      newStatus: dto.newStatus,
+      message: `A sua situacao academica foi atualizada para [${dto.newStatus}] sob o Despacho ${dto.despachoNumber}.`,
+    });
 
     return {
       message: 'Evento de carreira academica registrado com sucesso e situacao atualizada.',
@@ -504,6 +526,15 @@ export class RegistryService {
     this.logger.log(
       `Documento emitido: ${documentNumber} (${dto.documentType}), Hash: ${verificationHash}`,
     );
+
+    this.eventsGateway.notifyAccount(studentProfile.accountId, 'documento:emitido', {
+      documentId: issuedDocument.id,
+      documentNumber: issuedDocument.documentNumber,
+      documentType: issuedDocument.documentType,
+      verificationHash: issuedDocument.verificationHash,
+      verificationUrl: `/api/v1/registry/verify/${issuedDocument.verificationHash}`,
+      message: `O documento ${issuedDocument.documentNumber} foi emitido com sucesso e registrado com assinatura digital.`,
+    });
 
     return {
       message: 'Documento academico emitido e registrado com sucesso.',

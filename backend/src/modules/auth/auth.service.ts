@@ -21,6 +21,7 @@ import {
 } from "./dto/auth.schema";
 import { AccountStatus, UserRole } from "@prisma/client";
 import { PrismaService } from "@infra/database/prisma.service";
+import { MailerService } from "@infra/mailer/mailer.service";
 
 @Injectable()
 export class AuthService {
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailerService: MailerService,
   ) {}
 
   /**
@@ -345,6 +347,8 @@ export class AuthService {
     this.logger.log(
       `[RECUPERACAO DE SENHA] Token gerado para ${email} (Validade: 30 minutos)`,
     );
+
+    await this.mailerService.sendPasswordResetEmail(email, rawToken);
 
     return genericResponse;
   }

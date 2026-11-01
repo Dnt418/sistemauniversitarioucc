@@ -6,6 +6,9 @@ import { DatabaseModule } from './infra/database/database.module';
 import { RedisModule } from './infra/redis/redis.module';
 import { StorageModule } from './infra/storage/storage.module';
 import { QueueModule } from './infra/queue/queue.module';
+import { WebsocketModule } from './infra/websocket/websocket.module';
+import { MailerModule } from './infra/mailer/mailer.module';
+import { PdfModule } from './infra/pdf/pdf.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AcademicModule } from './modules/academic/academic.module';
@@ -27,6 +30,9 @@ import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor
     RedisModule,
     StorageModule,
     QueueModule,
+    WebsocketModule,
+    MailerModule,
+    PdfModule,
     HealthModule,
     AuthModule,
     AcademicModule,

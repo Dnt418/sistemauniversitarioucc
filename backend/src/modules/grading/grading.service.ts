@@ -19,12 +19,16 @@ import {
   SubmitPautaDto,
   RectifyPautaDto,
 } from './dto/grading.schema';
+import { EventsGateway } from '@infra/websocket/events.gateway';
 
 @Injectable()
 export class GradingService {
   private readonly logger = new Logger(GradingService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventsGateway: EventsGateway,
+  ) {}
 
   /**
    * RF-12: Painel de Turmas do Docente
@@ -645,6 +649,12 @@ export class GradingService {
       `Notas atualizadas com sucesso para a Turma ${turma.code} (${gradeUpdates.length} estudantes).`,
     );
 
+    this.eventsGateway.notifyTurma(turma.id, 'notas:atualizadas', {
+      turmaId: turma.id,
+      turmaCode: turma.code,
+      message: `Classificacoes atualizadas para a turma ${turma.code}.`,
+    });
+
     return {
       message: 'Classificacoes atualizadas e calculadas com sucesso.',
       updatedCount: gradeUpdates.length,
@@ -757,6 +767,14 @@ export class GradingService {
     this.logger.log(
       `Pauta homologada e congelada: Turma ${turma.code}, Hash: ${hashHomologacao}`,
     );
+
+    this.eventsGateway.notifyTurma(turma.id, 'pauta:homologada', {
+      turmaId: turma.id,
+      turmaCode: turma.code,
+      hashHomologacao: updatedPauta.hashHomologacao,
+      frozenAt: updatedPauta.frozenAt,
+      message: `A pauta oficial da turma ${turma.code} foi homologada e congelada com sucesso.`,
+    });
 
     return {
       message: 'Pauta submetida, homologada e congelada com sucesso.',
@@ -873,6 +891,13 @@ export class GradingService {
     this.logger.log(
       `Pauta ${pautaId} retificada administrativamente pela Secretaria sob Despacho '${dto.despacho}'.`,
     );
+
+    this.eventsGateway.notifyTurma(pauta.turmaId, 'pauta:retificada', {
+      pautaId: rectifiedData.id,
+      turmaId: pauta.turmaId,
+      despacho: dto.despacho,
+      message: `A pauta foi retificada pela Secretaria Geral sob o Despacho ${dto.despacho}.`,
+    });
 
     return {
       message: 'Pauta retificada com sucesso e registrada na trilha de auditoria institucional.',

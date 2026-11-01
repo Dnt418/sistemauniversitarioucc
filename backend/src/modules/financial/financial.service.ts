@@ -24,6 +24,7 @@ import {
   SubmitPaymentProofDto,
   ValidatePaymentProofDto,
 } from './dto/financial.schema';
+import { EventsGateway } from '@infra/websocket/events.gateway';
 
 @Injectable()
 export class FinancialService {
@@ -32,6 +33,7 @@ export class FinancialService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
   /**
@@ -193,8 +195,15 @@ export class FinancialService {
     });
 
     this.logger.log(
-      `Geracao de propinas conclutda: ${createdCount} faturas emitidas para ${monthName}/${dto.yearReference}.`,
+      `Geracao de propinas concluida: ${createdCount} faturas emitidas para ${monthName}/${dto.yearReference}.`,
     );
+
+    this.eventsGateway.notifyRole(UserRole.ESTUDANTE, 'propinas:emitidas', {
+      monthReference: dto.monthReference,
+      yearReference: dto.yearReference,
+      dueDate,
+      message: `As propinas referentes a ${monthName}/${dto.yearReference} foram emitidas na Tesouraria.`,
+    });
 
     return {
       message: `Propinas mensais geradas com sucesso.`,
@@ -625,6 +634,17 @@ export class FinancialService {
     this.logger.log(
       `Comprovativo ${paymentProofId} validado: Decisao '${dto.status}' por ${staffProfile.fullName}.`,
     );
+
+    this.eventsGateway.notifyAccount(proof.student.accountId, 'pagamento:processado', {
+      paymentProofId,
+      invoiceNumber: proof.invoice.invoiceNumber,
+      status: result.status,
+      decision: dto.status,
+      rejectionReason: dto.rejectionReason ?? null,
+      message: isApproval
+        ? `O pagamento referente a fatura ${proof.invoice.invoiceNumber} foi aprovado pela Tesouraria.`
+        : `O pagamento referente a fatura ${proof.invoice.invoiceNumber} foi rejeitado: ${dto.rejectionReason}.`,
+    });
 
     return {
       message: `Comprovativo de pagamento ${isApproval ? 'aprovado' : 'rejeitado'} com sucesso.`,
