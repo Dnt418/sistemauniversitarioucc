@@ -3,10 +3,10 @@ import {
   OnModuleInit,
   OnModuleDestroy,
   Logger,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bullmq';
-import { RedisService } from '../redis/redis.service';
+} from "@nestjs/common";
+import { Queue } from "bullmq";
+import { ConfigService } from "@nestjs/config";
+import { RedisService } from "../redis/redis.service";
 
 export interface EnrollmentJobData {
   estudanteId: string;
@@ -23,7 +23,11 @@ export interface EmailJobData {
 }
 
 export interface DocumentJobData {
-  tipo: 'COMPROVATIVO_INSCRICAO' | 'DECLARACAO_MATRICULA' | 'CERTIDAO_NOTAS' | 'PAUTA_FINAL';
+  tipo:
+    | "COMPROVATIVO_INSCRICAO"
+    | "DECLARACAO_MATRICULA"
+    | "CERTIDAO_NOTAS"
+    | "PAUTA_FINAL";
   solicitanteId: string;
   referenciaId?: string;
   metadata: Record<string, any>;
@@ -47,27 +51,27 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     try {
       const redisClient = this.redisService.getClient();
 
-      this.enrollmentQueue = new Queue<EnrollmentJobData>('fila-matriculas', {
+      this.enrollmentQueue = new Queue<EnrollmentJobData>("fila-matriculas", {
         connection: redisClient,
         defaultJobOptions: {
           attempts: 5,
-          backoff: { type: 'exponential', delay: 1000 },
+          backoff: { type: "exponential", delay: 1000 },
           removeOnComplete: 1000,
           removeOnFail: 5000,
         },
       });
 
-      this.emailQueue = new Queue<EmailJobData>('fila-emails', {
+      this.emailQueue = new Queue<EmailJobData>("fila-emails", {
         connection: redisClient,
         defaultJobOptions: {
           attempts: 3,
-          backoff: { type: 'fixed', delay: 3000 },
+          backoff: { type: "fixed", delay: 3000 },
           removeOnComplete: 500,
           removeOnFail: 2000,
         },
       });
 
-      this.documentQueue = new Queue<DocumentJobData>('fila-documentos', {
+      this.documentQueue = new Queue<DocumentJobData>("fila-documentos", {
         connection: redisClient,
         defaultJobOptions: {
           attempts: 2,
@@ -76,7 +80,9 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       });
 
       this.isReady = true;
-      this.logger.log('Filas BullMQ registradas com sucesso (Matriculas, Emails, Documentos)');
+      this.logger.log(
+        "Filas BullMQ registradas com sucesso (Matriculas, Emails, Documentos)",
+      );
     } catch (err: any) {
       this.isReady = false;
       this.logger.warn(
@@ -92,7 +98,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
         this.emailQueue?.close(),
         this.documentQueue?.close(),
       ]);
-      this.logger.log('Filas BullMQ encerradas com sucesso');
+      this.logger.log("Filas BullMQ encerradas com sucesso");
     }
   }
 
@@ -101,15 +107,19 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
    */
   async addEnrollmentJob(data: EnrollmentJobData) {
     if (!this.isReady || !this.enrollmentQueue) {
-      this.logger.warn(`[AVISO] Fila inativa. Processando matricula sincrona em contingencia: ${data.estudanteId}`);
+      this.logger.warn(
+        `[AVISO] Fila inativa. Processando matricula sincrona em contingencia: ${data.estudanteId}`,
+      );
       return { id: `local_${Date.now()}`, data };
     }
 
     try {
-      const job = await this.enrollmentQueue.add('persist-enrollment', data, {
+      const job = await this.enrollmentQueue.add("persist-enrollment", data, {
         jobId: `enroll_${data.estudanteId}_${data.turmaId}`,
       });
-      this.logger.log(`Inscricao enfileirada [Job ID: ${job.id}] para o Estudante: ${data.estudanteId}`);
+      this.logger.log(
+        `Inscricao enfileirada [Job ID: ${job.id}] para o Estudante: ${data.estudanteId}`,
+      );
       return job;
     } catch (err: any) {
       this.logger.error(`Falha ao enfileirar matricula: ${err.message}`);
@@ -122,13 +132,17 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
    */
   async addEmailJob(data: EmailJobData) {
     if (!this.isReady || !this.emailQueue) {
-      this.logger.warn(`[AVISO] Fila inativa. Email simulado para envio: ${data.to}`);
+      this.logger.warn(
+        `[AVISO] Fila inativa. Email simulado para envio: ${data.to}`,
+      );
       return { id: `local_${Date.now()}`, data };
     }
 
     try {
-      const job = await this.emailQueue.add('send-email', data);
-      this.logger.log(`Email enfileirado [Job ID: ${job.id}] para destinatario: ${data.to}`);
+      const job = await this.emailQueue.add("send-email", data);
+      this.logger.log(
+        `Email enfileirado [Job ID: ${job.id}] para destinatario: ${data.to}`,
+      );
       return job;
     } catch (err: any) {
       this.logger.error(`Falha ao enfileirar email: ${err.message}`);
@@ -141,13 +155,17 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
    */
   async addDocumentJob(data: DocumentJobData) {
     if (!this.isReady || !this.documentQueue) {
-      this.logger.warn(`[AVISO] Fila inativa. Solicitacao de documento registrada: ${data.tipo}`);
+      this.logger.warn(
+        `[AVISO] Fila inativa. Solicitacao de documento registrada: ${data.tipo}`,
+      );
       return { id: `local_${Date.now()}`, data };
     }
 
     try {
-      const job = await this.documentQueue.add('generate-document', data);
-      this.logger.log(`Geracao de documento [Job ID: ${job.id}] do tipo: ${data.tipo}`);
+      const job = await this.documentQueue.add("generate-document", data);
+      this.logger.log(
+        `Geracao de documento [Job ID: ${job.id}] do tipo: ${data.tipo}`,
+      );
       return job;
     } catch (err: any) {
       this.logger.error(`Falha ao enfileirar documento: ${err.message}`);

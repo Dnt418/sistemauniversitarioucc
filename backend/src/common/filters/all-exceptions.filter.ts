@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from "@nestjs/common";
+
 import { ZodError } from "zod";
 import { Request, Response } from "express";
 import { ZodValidationException } from "nestjs-zod";
@@ -24,7 +25,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let error = "Erro Interno do Servidor";
     let details: unknown = null;
 
-    // 1. Tratamento de exceções Zod (validação de schemas e contratos)
+    // Tratamento de exceções Zod (validação de schemas e contratos)
     if (exception instanceof ZodValidationException) {
       status = HttpStatus.BAD_REQUEST;
       error = "Requisicao Invalida";
@@ -45,7 +46,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         code: err.code,
       }));
     }
-    // 2. Tratamento de HttpExceptions padrão do NestJS
+    // Tratamento de HttpExceptions padrão do NestJS
     else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
@@ -62,7 +63,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         if (resObj.details) details = resObj.details;
       }
     }
-    // 3. Exceções não tratadas / Erros inesperados
+    // Exceções não tratadas / Erros inesperados
     else if (exception instanceof Error) {
       this.logger.error(
         `[${request.method}] ${request.url} - Erro inesperado: ${exception.message}`,

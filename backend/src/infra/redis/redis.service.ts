@@ -3,9 +3,9 @@ import {
   OnModuleInit,
   OnModuleDestroy,
   Logger,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import Redis from 'ioredis';
+} from "@nestjs/common";
+import Redis from "ioredis";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
@@ -66,9 +66,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
-    const redisUrl = this.configService.get<string>('REDIS_URL', {
-      infer: true,
-    }) || 'redis://localhost:6379';
+    const redisUrl =
+      this.configService.get<string>("REDIS_URL", {
+        infer: true,
+      }) || "redis://localhost:6379";
 
     this.client = new Redis(redisUrl, {
       maxRetriesPerRequest: null,
@@ -77,24 +78,26 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       retryStrategy: (times) => Math.min(times * 100, 3000),
     });
 
-    this.client.on('connect', () => {
-      this.logger.log('Conexao estabelecida com sucesso com o servidor Redis');
+    this.client.on("connect", () => {
+      this.logger.log("Conexao estabelecida com sucesso com o servidor Redis");
     });
 
-    this.client.on('error', (err) => {
+    this.client.on("error", (err) => {
       this.logger.error(`Erro na conexao com o Redis: ${err.message}`);
     });
 
     // Conectar de forma assincrona sem bloquear o boot
     this.client.connect().catch((err) => {
-      this.logger.warn(`Conexao inicial com Redis em segundo plano: ${err.message}`);
+      this.logger.warn(
+        `Conexao inicial com Redis em segundo plano: ${err.message}`,
+      );
     });
   }
 
   async onModuleDestroy() {
     if (this.client) {
       await this.client.quit();
-      this.logger.log('Conexao com o Redis encerrada com sucesso');
+      this.logger.log("Conexao com o Redis encerrada com sucesso");
     }
   }
 
@@ -106,7 +109,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
    * RF-10: Reserva atomica de vaga em milissegundos via script Lua
    * Retorna true se a vaga foi obtida com sucesso; false caso esgotada.
    */
-  async reserveSeat(turmaId: string, estudanteId: string, maxCapacity: number): Promise<boolean> {
+  async reserveSeat(
+    turmaId: string,
+    estudanteId: string,
+    maxCapacity: number,
+  ): Promise<boolean> {
     const vagasKey = `turma:vagas:${turmaId}`;
     const reservasKey = `turma:reservas:${turmaId}`;
 
@@ -157,7 +164,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   /**
    * Consulta a quantidade de vagas restantes em memoria
    */
-  async getAvailableSeats(turmaId: string, fallbackCapacity: number): Promise<number> {
+  async getAvailableSeats(
+    turmaId: string,
+    fallbackCapacity: number,
+  ): Promise<number> {
     const vagasKey = `turma:vagas:${turmaId}`;
     const seats = await this.client.get(vagasKey);
 
@@ -173,9 +183,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   /**
    * Sincroniza o contador do Redis com a base relacional
    */
-  async syncCapacity(turmaId: string, availableCapacity: number): Promise<void> {
+  async syncCapacity(
+    turmaId: string,
+    availableCapacity: number,
+  ): Promise<void> {
     const vagasKey = `turma:vagas:${turmaId}`;
     await this.client.set(vagasKey, availableCapacity.toString());
   }
 }
-

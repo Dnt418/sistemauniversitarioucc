@@ -1,5 +1,5 @@
-import { Module, Global } from '@nestjs/common';
-import { MailerService } from './mailer.service';
+import { Module, Global } from "@nestjs/common";
+import { MailerService } from "./mailer.service";
 
 @Global()
 @Module({
@@ -7,4 +7,3 @@ import { MailerService } from './mailer.service';
   exports: [MailerService],
 })
 export class MailerModule {}
-

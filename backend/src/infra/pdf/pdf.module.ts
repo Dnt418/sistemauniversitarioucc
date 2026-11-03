@@ -1,5 +1,5 @@
-import { Module, Global } from '@nestjs/common';
-import { PdfGeneratorService } from './pdf-generator.service';
+import { Module, Global } from "@nestjs/common";
+import { PdfGeneratorService } from "./pdf-generator.service";
 
 @Global()
 @Module({
@@ -7,4 +7,3 @@ import { PdfGeneratorService } from './pdf-generator.service';
   exports: [PdfGeneratorService],
 })
 export class PdfModule {}
-

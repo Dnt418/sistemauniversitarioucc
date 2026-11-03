@@ -6,12 +6,6 @@ import {
   BadRequestException,
   Logger,
 } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
-import { ConfigService } from "@nestjs/config";
-
-import * as crypto from "crypto";
-import * as bcrypt from "bcrypt";
-import { Response } from "express";
 
 import {
   LoginInput,
@@ -19,9 +13,16 @@ import {
   ForgotPasswordInput,
   ResetPasswordInput,
 } from "./dto/auth.schema";
+
+import * as crypto from "crypto";
+import * as bcrypt from "bcrypt";
+import { Response } from "express";
+import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
+
 import { AccountStatus, UserRole } from "@prisma/client";
-import { PrismaService } from "@infra/database/prisma.service";
 import { MailerService } from "@infra/mailer/mailer.service";
+import { PrismaService } from "@infra/database/prisma.service";
 
 @Injectable()
 export class AuthService {

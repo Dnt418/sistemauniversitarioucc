@@ -3,10 +3,10 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { UserRole } from '@prisma/client';
-import { ROLES_KEY } from '../decorators/roles.decorator';
+} from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import { UserRole } from "@prisma/client";
+import { ROLES_KEY } from "../decorators/roles.decorator";
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -28,7 +28,9 @@ export class RolesGuard implements CanActivate {
     const activeProfile: UserRole = request.activeProfile;
 
     if (!user) {
-      throw new ForbiddenException('Acesso restrito a utilizadores autenticados');
+      throw new ForbiddenException(
+        "Acesso restrito a utilizadores autenticados",
+      );
     }
 
     // Super Admin tem permissao institucional transversal
@@ -41,11 +43,10 @@ export class RolesGuard implements CanActivate {
 
     if (!hasRequiredRole) {
       throw new ForbiddenException(
-        `Acesso negado: o seu perfil ativo [${activeProfile}] nao possui permissao para este recurso. Papeis autorizados: ${requiredRoles.join(', ')}`,
+        `Acesso negado: o seu perfil ativo [${activeProfile}] nao possui permissao para este recurso. Papeis autorizados: ${requiredRoles.join(", ")}`,
       );
     }
 
     return true;
   }
 }
-

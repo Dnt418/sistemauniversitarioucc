@@ -1,8 +1,13 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { Worker, Job } from 'bullmq';
-import { RedisService } from '@infra/redis/redis.service';
-import { MailerService } from '@infra/mailer/mailer.service';
-import { EmailJobData } from '../queue.service';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from "@nestjs/common";
+import { Worker, Job } from "bullmq";
+import { EmailJobData } from "../queue.service";
+import { RedisService } from "@infra/redis/redis.service";
+import { MailerService } from "@infra/mailer/mailer.service";
 
 @Injectable()
 export class EmailWorker implements OnModuleInit, OnModuleDestroy {
@@ -20,7 +25,7 @@ export class EmailWorker implements OnModuleInit, OnModuleDestroy {
       const redisClient = this.redisService.getClient();
 
       this.worker = new Worker<EmailJobData>(
-        'fila-emails',
+        "fila-emails",
         async (job: Job<EmailJobData>) => {
           return this.processEmailJob(job);
         },
@@ -30,18 +35,20 @@ export class EmailWorker implements OnModuleInit, OnModuleDestroy {
         },
       );
 
-      this.worker.on('completed', (job) => {
+      this.worker.on("completed", (job) => {
         this.logger.log(`Job de email concluido com sucesso [ID: ${job.id}]`);
       });
 
-      this.worker.on('failed', (job, err) => {
+      this.worker.on("failed", (job, err) => {
         this.logger.error(
           `Falha no processamento de email [ID: ${job?.id}]: ${err.message}`,
         );
       });
 
       this.isRunning = true;
-      this.logger.log('Worker BullMQ para disparo de emails (fila-emails) ativo.');
+      this.logger.log(
+        "Worker BullMQ para disparo de emails (fila-emails) ativo.",
+      );
     } catch (err: any) {
       this.isRunning = false;
       this.logger.warn(
@@ -53,13 +60,15 @@ export class EmailWorker implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy() {
     if (this.isRunning && this.worker) {
       await this.worker.close();
-      this.logger.log('Worker de emails finalizado com sucesso.');
+      this.logger.log("Worker de emails finalizado com sucesso.");
     }
   }
 
   private async processEmailJob(job: Job<EmailJobData>) {
     const { to, subject, context } = job.data;
-    this.logger.log(`Processando disparo de email para: ${to} (Assunto: ${subject})`);
+    this.logger.log(
+      `Processando disparo de email para: ${to} (Assunto: ${subject})`,
+    );
 
     const htmlContent = context?.html || `<p>${subject}</p>`;
     const textContent = context?.text || subject;
@@ -72,4 +81,3 @@ export class EmailWorker implements OnModuleInit, OnModuleDestroy {
     });
   }
 }
-

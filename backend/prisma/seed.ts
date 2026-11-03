@@ -16,6 +16,7 @@ import {
   FeeType,
   InvoiceStatus,
 } from "@prisma/client";
+
 import * as bcrypt from "bcrypt";
 import * as crypto from "crypto";
 
@@ -26,9 +27,7 @@ async function main() {
 
   const defaultPassword = await bcrypt.hash("Siga@2026!", 10);
 
-  // ============================================================================
-  // 1. ESTRUTURA ORGANIZACIONAL (RF-05)
-  // ============================================================================
+  // ESTRUTURA ORGANIZACIONAL (RF-05)
   const faculty = await prisma.faculty.upsert({
     where: { code: "FE" },
     update: {},
@@ -71,9 +70,7 @@ async function main() {
   });
   console.log(`[SUCESSO] Curso provisionado: ${course.name} (${course.code})`);
 
-  // ============================================================================
-  // 2. GRELHA CURRICULAR E PRECEDENCIAS (RF-06)
-  // ============================================================================
+  // GRELHA CURRICULAR E PRECEDENCIAS (RF-06)
   const curriculum = await prisma.curriculum.upsert({
     where: {
       courseId_version: {
@@ -172,9 +169,7 @@ async function main() {
   });
   console.log(`[SUCESSO] Precedencia configurada: AP1 e pre-requisito de AP2`);
 
-  // ============================================================================
-  // 3. PERIODOS LETIVOS E CALENDARIO ACADEMICO (RF-07)
-  // ============================================================================
+  // PERIODOS LETIVOS E CALENDARIO ACADEMICO (RF-07)
   const academicYear = await prisma.academicYear.upsert({
     where: { code: "2025/2026" },
     update: {},
@@ -212,9 +207,7 @@ async function main() {
     `[SUCESSO] Semestre Academico corrente provisionado: 1º Semestre ${academicYear.code}`,
   );
 
-  // ============================================================================
-  // 4. IDENTIDADE, CONTAS E PERFIS
-  // ============================================================================
+  // IDENTIDADE, CONTAS E PERFIS
 
   // Super Administrador
   const adminEmail = "admin@siga.ao";
@@ -336,9 +329,7 @@ async function main() {
     console.log(`[SUCESSO] Oficial Financeiro criado: ${financeiro.email}`);
   }
 
-  // ============================================================================
-  // 5. TURMA REGULAR PLANEJADA (RF-08)
-  // ============================================================================
+  // TURMA REGULAR PLANEJADA (RF-08)
   if (docenteAccount?.docenteProfile) {
     const turma = await prisma.turma.upsert({
       where: {
@@ -376,9 +367,7 @@ async function main() {
     });
     console.log(`[SUCESSO] Turma planejada: ${turma.code} (${ap1.name})`);
 
-    // ============================================================================
-    // 6. MATRICULA, DIARIO E NOTAS DE EXEMPLO (RF-10, RF-13, RF-14)
-    // ============================================================================
+    // MATRICULA, DIARIO E NOTAS DE EXEMPLO (RF-10, RF-13, RF-14)
     const estudanteAccount = await prisma.account.findUnique({
       where: { email: estudanteEmail },
       include: { studentProfile: true },
@@ -387,7 +376,9 @@ async function main() {
     if (estudanteAccount?.studentProfile) {
       const verificationHash = crypto
         .createHash("sha256")
-        .update(`${estudanteAccount.studentProfile.id}-${turma.id}-${currentSemester.id}`)
+        .update(
+          `${estudanteAccount.studentProfile.id}-${turma.id}-${currentSemester.id}`,
+        )
         .digest("hex");
 
       const enrollment = await prisma.enrollment.upsert({
@@ -407,7 +398,9 @@ async function main() {
           verificationHash,
         },
       });
-      console.log(`[SUCESSO] Matricula provisionada: ${estudanteAccount.email} na turma ${turma.code}`);
+      console.log(
+        `[SUCESSO] Matricula provisionada: ${estudanteAccount.email} na turma ${turma.code}`,
+      );
 
       // Pauta da Turma
       const pauta = await prisma.pauta.upsert({
@@ -430,7 +423,8 @@ async function main() {
           data: {
             turmaId: turma.id,
             lessonDate,
-            lessonSummary: "Apresentacao da disciplina, objetivos e fundamentos da programacao estruturada.",
+            lessonSummary:
+              "Apresentacao da disciplina, objetivos e fundamentos da programacao estruturada.",
             hoursTaught: 2,
             records: {
               create: {
@@ -460,11 +454,11 @@ async function main() {
           observacoes: "Excelente aproveitamento e participacao regular.",
         },
       });
-      console.log(`[SUCESSO] Avaliacoes continuas e classificacao provisionadas`);
+      console.log(
+        `[SUCESSO] Avaliacoes continuas e classificacao provisionadas`,
+      );
 
-      // ============================================================================
-      // 7. EMOLUMENTOS, PROPINAS E FATURACAO (RF-20, RF-21)
-      // ============================================================================
+      // EMOLUMENTOS, PROPINAS E FATURACAO (RF-20, RF-21)
       const propinaFee = await prisma.feeCatalog.upsert({
         where: { code: "PROP-LEI" },
         update: {},
@@ -479,7 +473,9 @@ async function main() {
           isActive: true,
         },
       });
-      console.log(`[SUCESSO] Emolumento provisionado: ${propinaFee.name} (${propinaFee.code})`);
+      console.log(
+        `[SUCESSO] Emolumento provisionado: ${propinaFee.name} (${propinaFee.code})`,
+      );
 
       const matriculaFee = await prisma.feeCatalog.upsert({
         where: { code: "MATR-2026" },
@@ -494,7 +490,9 @@ async function main() {
           isActive: true,
         },
       });
-      console.log(`[SUCESSO] Emolumento provisionado: ${matriculaFee.name} (${matriculaFee.code})`);
+      console.log(
+        `[SUCESSO] Emolumento provisionado: ${matriculaFee.name} (${matriculaFee.code})`,
+      );
 
       const invoiceNumber = "FAT-2026-03-00001";
       await prisma.invoice.upsert({
@@ -505,7 +503,8 @@ async function main() {
           studentProfileId: estudanteAccount.studentProfile.id,
           feeCatalogId: propinaFee.id,
           academicSemesterId: currentSemester.id,
-          title: "Propina Referente ao Mes de Marco/2026 - Engenharia Informatica",
+          title:
+            "Propina Referente ao Mes de Marco/2026 - Engenharia Informatica",
           baseAmount: new Prisma.Decimal(55000.0),
           fineAmount: new Prisma.Decimal(0.0),
           discountAmount: new Prisma.Decimal(0.0),
@@ -518,7 +517,9 @@ async function main() {
           paidAt: new Date("2026-03-10T14:30:00Z"),
         },
       });
-      console.log(`[SUCESSO] Fatura regular liquidada provisionada para o estudante`);
+      console.log(
+        `[SUCESSO] Fatura regular liquidada provisionada para o estudante`,
+      );
     }
   }
 

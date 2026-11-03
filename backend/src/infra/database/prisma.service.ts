@@ -3,8 +3,8 @@ import {
   OnModuleInit,
   OnModuleDestroy,
   Logger,
-} from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+} from "@nestjs/common";
+import { PrismaClient } from "@prisma/client";
 
 @Injectable()
 export class PrismaService
@@ -16,10 +16,10 @@ export class PrismaService
   constructor() {
     super({
       log: [
-        { emit: 'event', level: 'query' },
-        { emit: 'stdout', level: 'info' },
-        { emit: 'stdout', level: 'warn' },
-        { emit: 'stdout', level: 'error' },
+        { emit: "event", level: "query" },
+        { emit: "stdout", level: "info" },
+        { emit: "stdout", level: "warn" },
+        { emit: "stdout", level: "error" },
       ],
     });
   }
@@ -27,10 +27,10 @@ export class PrismaService
   async onModuleInit() {
     try {
       await this.$connect();
-      this.logger.log('Conectado com sucesso ao PostgreSQL via Prisma ORM');
+      this.logger.log("Conectado com sucesso ao PostgreSQL via Prisma ORM");
     } catch (error) {
       this.logger.error(
-        'Falha ao conectar ao banco de dados na inicializacao da aplicacao',
+        "Falha ao conectar ao banco de dados na inicializacao da aplicacao",
         error,
       );
     }
@@ -38,7 +38,6 @@ export class PrismaService
 
   async onModuleDestroy() {
     await this.$disconnect();
-    this.logger.log('Conexao com PostgreSQL encerrada com sucesso');
+    this.logger.log("Conexao com PostgreSQL encerrada com sucesso");
   }
 }
-

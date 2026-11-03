@@ -1,12 +1,17 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { Worker, Job } from 'bullmq';
-import { RedisService } from '@infra/redis/redis.service';
-import { PrismaService } from '@infra/database/prisma.service';
-import { StorageService } from '@infra/storage/storage.service';
-import { PdfGeneratorService } from '@infra/pdf/pdf-generator.service';
-import { EventsGateway } from '@infra/websocket/events.gateway';
-import { DocumentJobData } from '../queue.service';
-import { IssuedDocumentStatus } from '@prisma/client';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from "@nestjs/common";
+import { Worker, Job } from "bullmq";
+import { DocumentJobData } from "../queue.service";
+import { IssuedDocumentStatus } from "@prisma/client";
+import { RedisService } from "@infra/redis/redis.service";
+import { PrismaService } from "@infra/database/prisma.service";
+import { StorageService } from "@infra/storage/storage.service";
+import { EventsGateway } from "@infra/websocket/events.gateway";
+import { PdfGeneratorService } from "@infra/pdf/pdf-generator.service";
 
 @Injectable()
 export class DocumentWorker implements OnModuleInit, OnModuleDestroy {
@@ -27,7 +32,7 @@ export class DocumentWorker implements OnModuleInit, OnModuleDestroy {
       const redisClient = this.redisService.getClient();
 
       this.worker = new Worker<DocumentJobData>(
-        'fila-documentos',
+        "fila-documentos",
         async (job: Job<DocumentJobData>) => {
           return this.processDocumentJob(job);
         },
@@ -37,18 +42,22 @@ export class DocumentWorker implements OnModuleInit, OnModuleDestroy {
         },
       );
 
-      this.worker.on('completed', (job) => {
-        this.logger.log(`Job de documento concluido com sucesso [ID: ${job.id}]`);
+      this.worker.on("completed", (job) => {
+        this.logger.log(
+          `Job de documento concluido com sucesso [ID: ${job.id}]`,
+        );
       });
 
-      this.worker.on('failed', (job, err) => {
+      this.worker.on("failed", (job, err) => {
         this.logger.error(
           `Falha no processamento de documento [ID: ${job?.id}]: ${err.message}`,
         );
       });
 
       this.isRunning = true;
-      this.logger.log('Worker BullMQ para geracao de documentos (fila-documentos) ativo.');
+      this.logger.log(
+        "Worker BullMQ para geracao de documentos (fila-documentos) ativo.",
+      );
     } catch (err: any) {
       this.isRunning = false;
       this.logger.warn(
@@ -60,20 +69,24 @@ export class DocumentWorker implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy() {
     if (this.isRunning && this.worker) {
       await this.worker.close();
-      this.logger.log('Worker de documentos finalizado com sucesso.');
+      this.logger.log("Worker de documentos finalizado com sucesso.");
     }
   }
 
   private async processDocumentJob(job: Job<DocumentJobData>) {
     const { referenciaId, tipo, metadata } = job.data;
-    this.logger.log(`Iniciando compilacao vetorial do documento: ${tipo} (${referenciaId})`);
+    this.logger.log(
+      `Iniciando compilacao vetorial do documento: ${tipo} (${referenciaId})`,
+    );
 
     if (!referenciaId) {
-      this.logger.warn(`Job de documento ignorado: referenciaId nao informado.`);
+      this.logger.warn(
+        `Job de documento ignorado: referenciaId nao informado.`,
+      );
       return;
     }
 
-    // 1. Processamento de Declaracao / Certidao Academica Oficial
+    // Processamento de Declaracao / Certidao Academica Oficial
     const issuedDoc = await this.prisma.issuedAcademicDocument.findUnique({
       where: { id: referenciaId },
       include: {
@@ -88,28 +101,31 @@ export class DocumentWorker implements OnModuleInit, OnModuleDestroy {
     if (issuedDoc) {
       const docMetadata = (issuedDoc.metadata as any) ?? {};
 
-      const pdfBuffer = await this.pdfGeneratorService.generateAcademicDocumentPdf({
-        documentNumber: issuedDoc.documentNumber,
-        documentType: issuedDoc.documentType,
-        studentName: issuedDoc.student.fullName,
-        studentNumber: issuedDoc.student.studentNumber,
-        identityCardNumber: issuedDoc.student.identityCardNumber,
-        courseName: issuedDoc.student.course?.name ?? 'Licenciatura',
-        issuedAt: issuedDoc.issuedAt,
-        verificationHash: issuedDoc.verificationHash,
-        purpose: docMetadata.purpose,
-        coeficienteRendimento: docMetadata.coeficienteRendimento,
-        grades: docMetadata.gradesSnapshot,
-      });
+      const pdfBuffer =
+        await this.pdfGeneratorService.generateAcademicDocumentPdf({
+          documentNumber: issuedDoc.documentNumber,
+          documentType: issuedDoc.documentType,
+          studentName: issuedDoc.student.fullName,
+          studentNumber: issuedDoc.student.studentNumber,
+          identityCardNumber: issuedDoc.student.identityCardNumber,
+          courseName: issuedDoc.student.course?.name ?? "Licenciatura",
+          issuedAt: issuedDoc.issuedAt,
+          verificationHash: issuedDoc.verificationHash,
+          purpose: docMetadata.purpose,
+          coeficienteRendimento: docMetadata.coeficienteRendimento,
+          grades: docMetadata.gradesSnapshot,
+        });
 
-      const fileKey = issuedDoc.fileKey || `documents/${issuedDoc.student.studentNumber}/${issuedDoc.documentNumber}.pdf`;
+      const fileKey =
+        issuedDoc.fileKey ||
+        `documents/${issuedDoc.student.studentNumber}/${issuedDoc.documentNumber}.pdf`;
 
       // Upload do arquivo compilado para o MinIO
       await this.storageService.uploadBuffer(
-        'siga-documents',
+        "siga-documents",
         fileKey,
         pdfBuffer,
-        'application/pdf',
+        "application/pdf",
       );
 
       // Atualiza estado do documento no banco
@@ -123,14 +139,18 @@ export class DocumentWorker implements OnModuleInit, OnModuleDestroy {
       });
 
       // Emite notificacao via WebSockets
-      this.eventsGateway.notifyAccount(issuedDoc.student.accountId, 'documento:gerado', {
-        documentId: issuedDoc.id,
-        documentNumber: issuedDoc.documentNumber,
-        documentType: issuedDoc.documentType,
-        verificationHash: issuedDoc.verificationHash,
-        downloadUrl: `/api/v1/registry/documents/${issuedDoc.id}/download-url`,
-        message: `O documento ${issuedDoc.documentNumber} foi compilado e encontra-se disponivel para download.`,
-      });
+      this.eventsGateway.notifyAccount(
+        issuedDoc.student.accountId,
+        "documento:gerado",
+        {
+          documentId: issuedDoc.id,
+          documentNumber: issuedDoc.documentNumber,
+          documentType: issuedDoc.documentType,
+          verificationHash: issuedDoc.verificationHash,
+          downloadUrl: `/api/v1/registry/documents/${issuedDoc.id}/download-url`,
+          message: `O documento ${issuedDoc.documentNumber} foi compilado e encontra-se disponivel para download.`,
+        },
+      );
 
       this.logger.log(
         `PDF gerado e gravado no MinIO: [siga-documents/${fileKey}] (${pdfBuffer.length} bytes)`,
@@ -138,7 +158,7 @@ export class DocumentWorker implements OnModuleInit, OnModuleDestroy {
       return { success: true, fileKey, bytes: pdfBuffer.length };
     }
 
-    // 2. Processamento de Comprovativo de Matricula em Turma
+    // Processamento de Comprovativo de Matricula em Turma
     const enrollment = await this.prisma.enrollment.findUnique({
       where: { id: referenciaId },
       include: {
@@ -161,47 +181,53 @@ export class DocumentWorker implements OnModuleInit, OnModuleDestroy {
     });
 
     if (enrollment) {
-      const pdfBuffer = await this.pdfGeneratorService.generateEnrollmentProofPdf({
-        studentName: enrollment.student.fullName,
-        studentNumber: enrollment.student.studentNumber,
-        identityCardNumber: enrollment.student.identityCardNumber,
-        courseName: enrollment.student.course?.name ?? 'Licenciatura',
-        enrolledAt: enrollment.enrolledAt,
-        academicYear: enrollment.academicSemester.academicYear.code,
-        semesterNumber: enrollment.academicSemester.semesterNumber,
-        turmas: [
-          {
-            turmaCode: enrollment.turma.code,
-            disciplinaCode: enrollment.turma.discipline.code,
-            disciplinaName: enrollment.turma.discipline.name,
-            credits: enrollment.turma.discipline.credits,
-            turno: enrollment.turma.turno,
-          },
-        ],
-        totalCredits: enrollment.turma.discipline.credits,
-        verificationHash: enrollment.verificationHash,
-      });
+      const pdfBuffer =
+        await this.pdfGeneratorService.generateEnrollmentProofPdf({
+          studentName: enrollment.student.fullName,
+          studentNumber: enrollment.student.studentNumber,
+          identityCardNumber: enrollment.student.identityCardNumber,
+          courseName: enrollment.student.course?.name ?? "Licenciatura",
+          enrolledAt: enrollment.enrolledAt,
+          academicYear: enrollment.academicSemester.academicYear.code,
+          semesterNumber: enrollment.academicSemester.semesterNumber,
+          turmas: [
+            {
+              turmaCode: enrollment.turma.code,
+              disciplinaCode: enrollment.turma.discipline.code,
+              disciplinaName: enrollment.turma.discipline.name,
+              credits: enrollment.turma.discipline.credits,
+              turno: enrollment.turma.turno,
+            },
+          ],
+          totalCredits: enrollment.turma.discipline.credits,
+          verificationHash: enrollment.verificationHash,
+        });
 
       const fileKey = `proofs/enrollments/${enrollment.student.studentNumber}/MATR-${enrollment.id.slice(0, 8)}.pdf`;
 
       await this.storageService.uploadBuffer(
-        'siga-documents',
+        "siga-documents",
         fileKey,
         pdfBuffer,
-        'application/pdf',
+        "application/pdf",
       );
 
-      this.eventsGateway.notifyAccount(enrollment.student.accountId, 'matricula:comprovativo_gerado', {
-        enrollmentId: enrollment.id,
-        verificationHash: enrollment.verificationHash,
-        fileKey,
-        message: 'O comprovativo de inscricao em PDF foi gerado com sucesso.',
-      });
+      this.eventsGateway.notifyAccount(
+        enrollment.student.accountId,
+        "matricula:comprovativo_gerado",
+        {
+          enrollmentId: enrollment.id,
+          verificationHash: enrollment.verificationHash,
+          fileKey,
+          message: "O comprovativo de inscricao em PDF foi gerado com sucesso.",
+        },
+      );
 
       return { success: true, fileKey, bytes: pdfBuffer.length };
     }
 
-    this.logger.warn(`Registro de referencia ${referenciaId} nao localizado para emissao de PDF.`);
+    this.logger.warn(
+      `Registro de referencia ${referenciaId} nao localizado para emissao de PDF.`,
+    );
   }
 }
-

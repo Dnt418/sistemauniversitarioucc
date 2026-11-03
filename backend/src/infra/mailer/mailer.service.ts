@@ -1,6 +1,6 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import * as nodemailer from "nodemailer";
 
 export interface SendEmailOptions {
   to: string;
@@ -14,23 +14,23 @@ export class MailerService implements OnModuleInit {
   private readonly logger = new Logger(MailerService.name);
   private transporter?: nodemailer.Transporter;
   private isConfigured = false;
-  private defaultFrom = 'SIGA Universitário <nao-responder@siga.ao>';
-  private portalUrl = 'http://localhost:3000';
+  private defaultFrom = "SIGA Universitário <nao-responder@siga.ao>";
+  private portalUrl = "http://localhost:3000";
 
   constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
     try {
-      const host = this.configService.get<string>('SMTP_HOST') || 'localhost';
-      const port = this.configService.get<number>('SMTP_PORT') || 1025;
-      const secure = this.configService.get<boolean>('SMTP_SECURE') || false;
-      const user = this.configService.get<string>('SMTP_USER');
-      const pass = this.configService.get<string>('SMTP_PASS');
+      const host = this.configService.get<string>("SMTP_HOST") || "localhost";
+      const port = this.configService.get<number>("SMTP_PORT") || 1025;
+      const secure = this.configService.get<boolean>("SMTP_SECURE") || false;
+      const user = this.configService.get<string>("SMTP_USER");
+      const pass = this.configService.get<string>("SMTP_PASS");
       this.defaultFrom =
-        this.configService.get<string>('SMTP_FROM') ||
-        'SIGA Universitário <nao-responder@siga.ao>';
+        this.configService.get<string>("SMTP_FROM") ||
+        "SIGA Universitário <nao-responder@siga.ao>";
       this.portalUrl =
-        this.configService.get<string>('PORTAL_URL') || 'http://localhost:3000';
+        this.configService.get<string>("PORTAL_URL") || "http://localhost:3000";
 
       this.transporter = nodemailer.createTransport({
         host,
@@ -90,7 +90,9 @@ export class MailerService implements OnModuleInit {
     fullName?: string,
   ): Promise<boolean> {
     const resetUrl = `${this.portalUrl}/auth/reset-password?token=${token}`;
-    const greeting = fullName ? `Prezado(a) ${fullName},` : 'Prezado(a) Utilizador(a),';
+    const greeting = fullName
+      ? `Prezado(a) ${fullName},`
+      : "Prezado(a) Utilizador(a),";
 
     const html = `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 24px;">
@@ -112,7 +114,7 @@ export class MailerService implements OnModuleInit {
 
     return this.sendEmail({
       to,
-      subject: 'SIGA Universitário - Recuperação de Senha de Acesso',
+      subject: "SIGA Universitário - Recuperação de Senha de Acesso",
       html,
       text: `${greeting}\n\nPara redefinir a sua senha no SIGA Universitário, aceda ao link:\n${resetUrl}\n\nO link e valido por 15 minutos.`,
     });
@@ -134,7 +136,7 @@ export class MailerService implements OnModuleInit {
         <h2 style="color: #003366; margin-top: 0;">Confirmação de Inscrição em Turmas</h2>
         <p>Prezado(a) <strong>${studentName}</strong>,</p>
         <p>A sua inscrição semestral foi confirmada com sucesso pelo motor de matrículas do SIGA Universitário.</p>
-        <p><strong>Turmas Inscritas:</strong> ${turmaCodes.join(', ')}</p>
+        <p><strong>Turmas Inscritas:</strong> ${turmaCodes.join(", ")}</p>
         <p><strong>Código Hash de Autenticidade Digital (SHA-256):</strong><br/>
         <code style="background-color: #f4f4f4; padding: 4px 8px; border-radius: 4px; font-size: 12px; word-break: break-all;">${verificationHash}</code></p>
         <div style="margin: 24px 0; text-align: center;">
@@ -149,9 +151,9 @@ export class MailerService implements OnModuleInit {
 
     return this.sendEmail({
       to,
-      subject: 'SIGA Universitário - Confirmação Oficial de Matrícula',
+      subject: "SIGA Universitário - Confirmação Oficial de Matrícula",
       html,
-      text: `Prezado(a) ${studentName},\n\nA sua inscricao foi confirmada nas turmas: ${turmaCodes.join(', ')}.\nHash SHA-256: ${verificationHash}\nVerificacao: ${verifyUrl}`,
+      text: `Prezado(a) ${studentName},\n\nA sua inscricao foi confirmada nas turmas: ${turmaCodes.join(", ")}.\nHash SHA-256: ${verificationHash}\nVerificacao: ${verifyUrl}`,
     });
   }
 
@@ -165,8 +167,8 @@ export class MailerService implements OnModuleInit {
     amount: number,
     dueDate: Date,
   ): Promise<boolean> {
-    const formattedDate = new Date(dueDate).toLocaleDateString('pt-AO');
-    const formattedAmount = `${amount.toLocaleString('pt-AO', { minimumFractionDigits: 2 })} AOA`;
+    const formattedDate = new Date(dueDate).toLocaleDateString("pt-AO");
+    const formattedAmount = `${amount.toLocaleString("pt-AO", { minimumFractionDigits: 2 })} AOA`;
 
     const html = `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 24px;">
@@ -201,8 +203,8 @@ export class MailerService implements OnModuleInit {
     isApproved: boolean,
     reason?: string,
   ): Promise<boolean> {
-    const statusText = isApproved ? 'Aprovado' : 'Rejeitado';
-    const statusColor = isApproved ? '#28a745' : '#dc3545';
+    const statusText = isApproved ? "Aprovado" : "Rejeitado";
+    const statusColor = isApproved ? "#28a745" : "#dc3545";
 
     const html = `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 24px;">
@@ -210,8 +212,8 @@ export class MailerService implements OnModuleInit {
         <p>Prezado(a) <strong>${studentName}</strong>,</p>
         <p>O comprovativo bancário submetido para a fatura <strong>${invoiceNumber}</strong> foi avaliado pela Tesouraria:</p>
         <p style="font-size: 16px;"><strong>Decisão:</strong> <span style="color: ${statusColor}; font-weight: bold;">${statusText}</span></p>
-        ${!isApproved && reason ? `<p><strong>Motivo da Rejeição:</strong> ${reason}</p>` : ''}
-        ${isApproved ? '<p>A sua conta corrente foi devidamente creditada e a fatura encontra-se liquidada.</p>' : '<p>Por favor, regularize a sua pendência submetendo um novo documento válido ou dirija-se à Tesouraria.</p>'}
+        ${!isApproved && reason ? `<p><strong>Motivo da Rejeição:</strong> ${reason}</p>` : ""}
+        ${isApproved ? "<p>A sua conta corrente foi devidamente creditada e a fatura encontra-se liquidada.</p>" : "<p>Por favor, regularize a sua pendência submetendo um novo documento válido ou dirija-se à Tesouraria.</p>"}
         <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
         <p style="font-size: 12px; color: #999;">Tesouraria e Gestão Financeira - SIGA Universitário.</p>
       </div>
@@ -221,8 +223,7 @@ export class MailerService implements OnModuleInit {
       to,
       subject: `SIGA Universitário - Decisão sobre Pagamento (${invoiceNumber})`,
       html,
-      text: `Prezado(a) ${studentName},\n\nO seu comprovativo referente a fatura ${invoiceNumber} foi ${statusText}.\n${!isApproved && reason ? 'Motivo: ' + reason : ''}`,
+      text: `Prezado(a) ${studentName},\n\nO seu comprovativo referente a fatura ${invoiceNumber} foi ${statusText}.\n${!isApproved && reason ? "Motivo: " + reason : ""}`,
     });
   }
 }
-

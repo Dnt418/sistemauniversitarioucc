@@ -1,7 +1,7 @@
-import { Global, Module } from '@nestjs/common';
-import { QueueService } from './queue.service';
-import { DocumentWorker } from './workers/document.worker';
-import { EmailWorker } from './workers/email.worker';
+import { QueueService } from "./queue.service";
+import { Global, Module } from "@nestjs/common";
+import { EmailWorker } from "./workers/email.worker";
+import { DocumentWorker } from "./workers/document.worker";
 
 @Global()
 @Module({
@@ -9,4 +9,3 @@ import { EmailWorker } from './workers/email.worker';
   exports: [QueueService],
 })
 export class QueueModule {}
-

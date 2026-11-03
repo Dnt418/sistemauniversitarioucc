@@ -1,7 +1,7 @@
-import { Module, Global } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { EventsGateway } from './events.gateway';
+import { Module, Global } from "@nestjs/common";
+import { JwtModule } from "@nestjs/jwt";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { EventsGateway } from "./events.gateway";
 
 @Global()
 @Module({
@@ -10,7 +10,7 @@ import { EventsGateway } from './events.gateway';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
+        secret: configService.get<string>("JWT_SECRET"),
       }),
     }),
   ],
@@ -18,4 +18,3 @@ import { EventsGateway } from './events.gateway';
   exports: [EventsGateway],
 })
 export class WebsocketModule {}
-
