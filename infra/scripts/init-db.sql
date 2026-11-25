@@ -8,6 +8,6 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Log de confirmação
 DO $$
 BEGIN
-   RAISE NOTICE 'Base de dados do SIGA Universitário inicializada com sucesso com extensões UUID e PGCRYPTO'.;
+   RAISE NOTICE 'Base de dados do SIGA Universitário inicializada com sucesso com extensões UUID e PGCRYPTO.';
 END
 $$;
