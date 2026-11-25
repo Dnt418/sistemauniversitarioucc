@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "npm run --prefix backend dev",
     "dev:backend": "npm run --prefix backend dev",
+    "dev:frontend": "npm run --prefix frontend dev",
     "dev:infra": "node scripts/infra.js up -d",
     "dev:infra:down": "node scripts/infra.js down",
     "dev:infra:logs": "node scripts/infra.js logs -f",

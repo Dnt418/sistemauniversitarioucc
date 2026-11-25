@@ -2,15 +2,38 @@ const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
-function getDockerCommand() {
-  // 1. Verificar se docker responde diretamente
-  const check = spawnSync("docker", ["--version"], { shell: true });
-  if (check.status === 0) {
-    return { cmd: "docker", binDir: null };
+function getComposeCommand() {
+  const composeCandidates = [
+    path.join(
+      process.env.LOCALAPPDATA || "",
+      "Programs",
+      "DockerDesktop",
+      "resources",
+      "bin",
+      "docker-compose.exe",
+    ),
+    "C:\\Users\\Home\\AppData\\Local\\Programs\\DockerDesktop\\resources\\bin\\docker-compose.exe",
+    "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker-compose.exe",
+  ];
+
+  for (const candidate of composeCandidates) {
+    if (fs.existsSync(candidate)) {
+      return {
+        cmd: candidate,
+        isComposeStandalone: true,
+        binDir: path.dirname(candidate),
+      };
+    }
   }
 
-  // 2. Procurar em caminhos conhecidos do Docker Desktop no Windows
-  const candidates = [
+  const checkCompose = spawnSync("docker-compose", ["--version"], {
+    shell: true,
+  });
+  if (checkCompose.status === 0) {
+    return { cmd: "docker-compose", isComposeStandalone: true, binDir: null };
+  }
+
+  const dockerCandidates = [
     path.join(
       process.env.LOCALAPPDATA || "",
       "Programs",
@@ -23,32 +46,42 @@ function getDockerCommand() {
     "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe",
   ];
 
-  for (const candidate of candidates) {
+  for (const candidate of dockerCandidates) {
     if (fs.existsSync(candidate)) {
-      return { cmd: candidate, binDir: path.dirname(candidate) };
+      return {
+        cmd: candidate,
+        isComposeStandalone: false,
+        binDir: path.dirname(candidate),
+      };
     }
   }
 
-  return { cmd: "docker", binDir: null };
+  return { cmd: "docker", isComposeStandalone: false, binDir: null };
 }
 
-const { cmd, binDir } = getDockerCommand();
+const { cmd, isComposeStandalone, binDir } = getComposeCommand();
 
 const env = { ...process.env };
 if (binDir) {
   env.PATH = `${binDir};${env.PATH || ""}`;
 }
 
-const args = process.argv.slice(2);
+const userArgs = process.argv.slice(2);
 const composeFile = path.resolve(
   __dirname,
   "..",
   "infra",
   "docker-compose.yml",
 );
-const fullArgs = ["compose", "-f", composeFile, ...args];
 
-console.log(`[INFRA] Executando: ${cmd} ${fullArgs.join(" ")}`);
+let fullArgs = [];
+if (isComposeStandalone) {
+  fullArgs = ["-f", composeFile, ...userArgs];
+} else {
+  fullArgs = ["compose", "-f", composeFile, ...userArgs];
+}
+
+console.log(`[INFRA] Executando: "${cmd}" ${fullArgs.join(" ")}`);
 const result = spawnSync(cmd, fullArgs, {
   stdio: "inherit",
   shell: true,
